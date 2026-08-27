@@ -1,4 +1,32 @@
 @import "tailwindcss";
+@import "@animation-playground/design-tokens/tokens.css";
+
+/* Maps the design-tokens package's `--air-*` custom properties (layered by
+ * [data-theme][data-mode], see packages/design-tokens/README.md) onto
+ * Tailwind v4 theme keys, so utilities like `bg-accent` or `text-label`
+ * resolve through the cascade and repaint whenever those attributes change. */
+@theme inline {
+  --color-accent: var(--air-accent);
+  --color-surface: var(--air-bg);
+  --color-surface-secondary: var(--air-bg-secondary);
+  --color-surface-tertiary: var(--air-bg-tertiary);
+  --color-surface-sheet: var(--air-bg-sheet);
+  --color-label: var(--air-label);
+  --color-label-secondary: var(--air-label-secondary);
+  --color-label-tertiary: var(--air-label-tertiary);
+  --color-label-on-accent: var(--air-label-on-accent);
+  --color-separator: var(--air-separator);
+  --color-fill: var(--air-fill);
+  --color-fill-secondary: var(--air-fill-secondary);
+  --color-status-success: var(--air-status-success);
+  --color-status-warning: var(--air-status-warning);
+  --color-status-error: var(--air-status-error);
+  --color-status-info: var(--air-status-info);
+
+  --radius-content: var(--air-radius-content);
+  --radius-modal: var(--air-radius-modal);
+  --radius-pill: var(--air-radius-pill);
+}
 
 :root {
   color-scheme: light dark;
@@ -6,4 +34,6 @@
 
 body {
   margin: 0;
+  background-color: var(--air-bg);
+  color: var(--air-label);
 }

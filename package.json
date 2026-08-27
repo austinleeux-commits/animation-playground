@@ -8,12 +8,15 @@
     "pnpm": ">=9"
   },
   "scripts": {
+    "predev": "pnpm --filter @animation-playground/design-tokens build",
     "dev": "vite",
+    "prebuild": "pnpm --filter @animation-playground/design-tokens build",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@animation-playground/design-tokens": "workspace:*",
     "dialkit": "^1.4.3",
     "motion": "^13.1.1",
     "react": "^19.2.8",
