@@ -1,0 +1,13 @@
+{
+  "name": "@animation-playground/design-tokens",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./tokens.css": "./dist/tokens.css",
+    "./themes.json": "./dist/themes.json"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  }
+}
