@@ -89,3 +89,18 @@ body {
     animation: none;
   }
 }
+
+/*
+ * Scroll areas inside a card hide the native scrollbar entirely and draw their
+ * own thumb (see ScrollArea), so the reveal-then-fade is the same whether or
+ * not the OS is set to always show scrollbars — and so it takes no layout
+ * space, which is what the Figma frame draws.
+ */
+.air-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.air-scroll::-webkit-scrollbar {
+  display: none;
+}
