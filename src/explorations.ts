@@ -34,7 +34,7 @@ export const EXPLORATIONS: Exploration[] = [
     path: '/todo-card-morph-hug',
     label: 'Todo Card Morph (Hug)',
     description:
-      'Same morph, but the collapsed pill hugs its content width instead of the card\'s.',
+      'Same morph, but the collapsed pill hugs its content width — and the two axes can grow together or sideways first.',
     Component: TodoMorphHugPage,
   },
 ]

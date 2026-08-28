@@ -286,6 +286,16 @@ export function TodoMorphHugDemo() {
    * load, keeping the panel scannable.
    */
   const p = useDialKit('Todo Card Morph — Hugged Pill', {
+    /* Diagonal grows both axes at once; Sideways First stretches the pill to
+       the column and only then unfurls it downward. */
+    expandOrder: {
+      type: 'select',
+      options: [
+        { value: 'diagonal', label: 'Diagonal' },
+        { value: 'sideways', label: 'Sideways First' },
+      ],
+      default: 'diagonal',
+    },
     maxCardHeight: [656, 240, 904, 4],
     cornerRadius: {
       _collapsed: true,
@@ -294,7 +304,14 @@ export function TodoMorphHugDemo() {
     },
     whenOpening: {
       _collapsed: true,
-      cardGrows: { type: 'spring', visualDuration: 0.45, bounce: 0.2 },
+      cardGrows: { type: 'spring', visualDuration: 0.25, bounce: 0.2 },
+      /* Sideways First only: the stretch, and how long the unfurl holds off. */
+      widthGrows: {
+        type: 'easing',
+        duration: 0.34,
+        ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+      },
+      heightStartsAfter: [0.26, 0, 0.8],
       pillFadesOut: {
         type: 'easing',
         duration: 0.12,
@@ -312,7 +329,14 @@ export function TodoMorphHugDemo() {
     },
     whenClosing: {
       _collapsed: true,
-      cardShrinks: { type: 'spring', visualDuration: 0.35, bounce: 0 },
+      cardShrinks: { type: 'spring', visualDuration: 0.15, bounce: 0 },
+      /* Mirrors the open: the card drops to pill height first, then narrows. */
+      widthShrinks: {
+        type: 'easing',
+        duration: 0.28,
+        ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+      },
+      widthStartsAfter: [0.22, 0, 0.8],
       rowsFadeOut: {
         type: 'easing',
         duration: 0.15,
@@ -324,7 +348,7 @@ export function TodoMorphHugDemo() {
         ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
       },
       pillWaits: [0.1, 0, 0.5],
-      betweenRows: [0.012, 0, 0.15],
+      betweenRows: [0.01, 0, 0.15],
       rowsSlideTo: [8, -40, 40],
       colorChange: [0.2, 0, 1.2],
     },
@@ -363,17 +387,42 @@ export function TodoMorphHugDemo() {
   const detailSize = toTransition(p.openingAStep.heightChange as DialTransition)
   const detailFade = toTransition(p.openingAStep.textFade as DialTransition)
   const scroll = { idle: p.scrollbar.hideAfter, fade: p.scrollbar.fadeSpeed }
+  /*
+   * Sideways First splits the morph in two: the pill stretches to the column
+   * on its own transition, then the card unfurls downward; closing reverses
+   * the pair. These are how long the second leg holds off — and, like the
+   * transitions above, each belongs to the one gesture it can occur in, so an
+   * exiting child reading it can't be handed the wrong direction's number.
+   * Both are 0 on Diagonal, which leaves that reading untouched.
+   */
+  const sequenced = p.expandOrder === 'sideways'
+  const openingHold = sequenced ? p.whenOpening.heightStartsAfter : 0
+  const closingHold = sequenced ? p.whenClosing.widthStartsAfter : 0
+  const widthTransition = sequenced
+    ? toTransition(
+        (open
+          ? p.whenOpening.widthGrows
+          : p.whenClosing.widthShrinks) as DialTransition,
+      )
+    : container
 
   /*
-   * The gesture's own transition, held for the size effect below. Declared
-   * first, so it lands before that effect runs on the same commit and reads
-   * the spring picked for the gesture that triggered it. Taking it through a
-   * ref also keeps a dial edited mid-flight from restarting a run that is
-   * already going — it lands on the next gesture instead.
+   * How the gesture drives the two axes — a transition and a start offset
+   * each — held for the size effect below. Declared first, so it lands before
+   * that effect runs on the same commit and reads the timings picked for the
+   * gesture that triggered it. Taking it through a ref also keeps a dial
+   * edited mid-flight from restarting a run that is already going — it lands
+   * on the next gesture instead.
    */
-  const gesture = useRef(container)
+  const plan = {
+    width: widthTransition,
+    height: container,
+    widthDelay: open ? 0 : closingHold,
+    heightDelay: open ? openingHold : 0,
+  }
+  const gesture = useRef(plan)
   useLayoutEffect(() => {
-    gesture.current = container
+    gesture.current = plan
   })
 
   /*
@@ -422,16 +471,33 @@ export function TodoMorphHugDemo() {
     const targetWidth = open
       ? (containerRef.current?.offsetWidth ?? child.offsetWidth)
       : child.offsetWidth
+    const g = gesture.current
+    /*
+     * Sizing goes back to the content once *both* legs have landed — which
+     * one that is depends on the order and on what the dials are set to, and
+     * releasing on the wrong one would hand a still-running spring's axis
+     * back to CSS mid-flight. Not called for a leg that was stopped, so an
+     * interrupted gesture can't release late either.
+     */
+    let running = 2
+    const release = () => {
+      if (--running > 0) return
+      cardWidth.jump(open ? '100%' : 'fit-content')
+      cardHeight.jump('auto')
+    }
     cardWidth.jump(from.width)
     cardHeight.jump(from.height)
-    const widthControls = animate(cardWidth, targetWidth, { ...gesture.current })
+    /* A delayed run holds the value where `jump` left it until the delay is
+       up, which is what gives the two legs their gap. */
+    const widthControls = animate(cardWidth, targetWidth, {
+      ...g.width,
+      delay: g.widthDelay,
+      onComplete: release,
+    })
     const heightControls = animate(cardHeight, child.offsetHeight, {
-      ...gesture.current,
-      /* Not called when the run is stopped, so the release can't land late. */
-      onComplete: () => {
-        cardWidth.jump(open ? '100%' : 'fit-content')
-        cardHeight.jump('auto')
-      },
+      ...g.height,
+      delay: g.heightDelay,
+      onComplete: release,
     })
     return () => {
       widthControls.stop()
@@ -516,7 +582,7 @@ export function TodoMorphHugDemo() {
                     hidden: {},
                     visible: {
                       transition: {
-                        delayChildren: p.whenOpening.rowsWait,
+                        delayChildren: p.whenOpening.rowsWait + openingHold,
                         staggerChildren: p.whenOpening.betweenRows,
                       },
                     },
@@ -593,9 +659,15 @@ export function TodoMorphHugDemo() {
                   initial={{ opacity: 0 }}
                   animate={{
                     opacity: 1,
-                    transition: { ...collapseEnter, delay: p.whenClosing.pillWaits },
+                    transition: {
+                      ...collapseEnter,
+                      delay: p.whenClosing.pillWaits + closingHold,
+                    },
                   }}
-                  exit={{ opacity: 0, transition: expandExit }}
+                  exit={{
+                    opacity: 0,
+                    transition: { ...expandExit, delay: openingHold },
+                  }}
                   className="flex h-9 w-fit cursor-pointer items-center gap-2 p-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   <LightbulbIcon className="shrink-0 text-label" />
