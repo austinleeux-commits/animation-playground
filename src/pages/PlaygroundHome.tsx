@@ -2,6 +2,7 @@ import { FadeDemo } from '../playground/FadeDemo'
 import { GestureDemo } from '../playground/GestureDemo'
 import { GlassDemo } from '../playground/GlassDemo'
 import { LayoutDemo } from '../playground/LayoutDemo'
+import { LightbulbSparkleFlipDemo } from '../playground/LightbulbSparkleFlipDemo'
 import { SpringDemo } from '../playground/SpringDemo'
 import { StaggerDemo } from '../playground/StaggerDemo'
 import { ThemeDemo } from '../playground/ThemeDemo'
@@ -16,6 +17,7 @@ export function PlaygroundHome() {
       <StaggerDemo />
       <LayoutDemo />
       <GestureDemo />
+      <LightbulbSparkleFlipDemo />
     </main>
   )
 }
