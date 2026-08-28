@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 import { PlaygroundHome } from './pages/PlaygroundHome'
 import { TodoMorphPage } from './pages/TodoMorphPage'
+import { TodoMorphHugPage } from './pages/TodoMorphHugPage'
 
 export type Exploration = {
   path: string
@@ -28,5 +29,12 @@ export const EXPLORATIONS: Exploration[] = [
     description:
       'A status pill expanding into a todo card, from the AI Chat "Thinking Steps" frames.',
     Component: TodoMorphPage,
+  },
+  {
+    path: '/todo-card-morph-hug',
+    label: 'Todo Card Morph (Hug)',
+    description:
+      'Same morph, but the collapsed pill hugs its content width instead of the card\'s.',
+    Component: TodoMorphHugPage,
   },
 ]
