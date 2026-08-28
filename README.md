@@ -40,15 +40,23 @@ Each demo lives in `src/playground/` as a self-contained component that calls `u
 
 If the design needs a semantic slot that isn't mapped yet, add it to the `@theme inline` block in `src/index.css` (pointing at the matching `--air-*` variable) rather than hardcoding the color — the token package already carries every slot for all 18 themes in both modes.
 
+## Naming DialKit controls
+
+DialKit builds each control's label from its key — splitting camelCase and title-casing it — and has no description or tooltip field. The key *is* the UI copy, so write it as the phrase a designer should read (`pillFadesOut`, `rowsSlideFrom`, `betweenRows`) rather than as an internal name, and give every group `_collapsed: true` so the panel opens as a short list to drill into.
+
+The full convention and its gotchas live in the **`dialkit-controls`** skill (`.claude/skills/dialkit-controls/SKILL.md`). Follow it whenever you add or edit a `useDialKit` config.
+
 ## Todo Card Morph
 
 Built from two frames in the "AI Chat" Figma file — `Thinking Steps 1` (a 36px status pill) and `Thinking Steps 2` (the 656px todo card). Both frames place the element at the same position and width, so the whole transition is a downward container transform.
 
 Icons are inlined in `src/playground/icons/AirIcons.tsx` from the Figma exports kept alongside them in that folder. The path data and the 16px/34px boxes are unchanged; only the fixed stroke colors became `currentColor`, so each icon inherits its row's token-driven text color.
 
-The `Technique` dial switches between the two ways to build this transition:
+The card hugs its content up to `Max Card Height`, then the step list scrolls inside it. Steps behave as an accordion — one open at a time, starting on whichever step is still running. Completed steps expand their reasoning on the same hairline-thread treatment; the in-progress step keeps the filled panel, scrolling its own output. Both scroll areas draw their own thumb (hidden at rest, revealed while scrolling, faded out after) rather than styling `::-webkit-scrollbar`, which would force a space-taking scrollbar on machines set to always show them.
 
-- **Morph (layout)** — Motion's `layout` projection. The card's *visual* size animates while its DOM height changes instantly, so anything below it snaps to the new position immediately.
-- **Reveal (height)** — the container's measured height animates. Slower to set up, but content below the card moves with it.
+The `Card Grows By` dial switches between the two ways to build this transition:
+
+- **Scaling** — Motion's `layout` projection. The card's *visual* size animates while its DOM height changes instantly, so anything below it snaps to the new position immediately.
+- **Height** — the container's measured height animates. Slower to set up, but content below the card moves with it.
 
 Geometry (radius, spring, stagger) is animated by Motion; the surface swap (pill fill → elevated surface, plus the shadow and hairline) is a CSS transition, because Motion can't interpolate between two `var()` values.
