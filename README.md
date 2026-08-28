@@ -48,15 +48,12 @@ The full convention and its gotchas live in the **`dialkit-controls`** skill (`.
 
 ## Todo Card Morph
 
-Built from two frames in the "AI Chat" Figma file — `Thinking Steps 1` (a 36px status pill) and `Thinking Steps 2` (the 656px todo card). Both frames place the element at the same position and width, so the whole transition is a downward container transform.
+Built from two frames in the "AI Chat" Figma file — `Thinking Steps 1` (a 36px status pill) and `Thinking Steps 2` (the 656px todo card). Both frames place the element at the same position and width, so the whole transition is the container growing downwards.
 
 Icons are inlined in `src/playground/icons/AirIcons.tsx` from the Figma exports kept alongside them in that folder. The path data and the 16px/34px boxes are unchanged; only the fixed stroke colors became `currentColor`, so each icon inherits its row's token-driven text color.
 
 The card hugs its content up to `Max Card Height`, then the step list scrolls inside it. Steps behave as an accordion — one open at a time, starting on whichever step is still running. Completed steps expand their reasoning on the same hairline-thread treatment; the in-progress step keeps the filled panel, scrolling its own output. Both scroll areas draw their own thumb (hidden at rest, revealed while scrolling, faded out after) rather than styling `::-webkit-scrollbar`, which would force a space-taking scrollbar on machines set to always show them.
 
-The `Card Grows By` dial switches between the two ways to build this transition:
-
-- **Scaling** — Motion's `layout` projection. The card's *visual* size animates while its DOM height changes instantly, so anything below it snaps to the new position immediately.
-- **Height** — the container's measured height animates. Slower to set up, but content below the card moves with it.
+The card's height animates across the pill ⇄ card swap and is then handed back to the content, so opening or closing a step resizes the card in the same frame as the row, on that row's own spring — `Opening A Step > Height Change`. `When Opening > Card Grows` and `When Closing > Card Shrinks` govern only the swap itself. Motion's `layout` projection was the other candidate here and is deliberately not used: it animates the card's *visual* size while its DOM height changes instantly, so anything below the card snaps to the new position a beat early.
 
 Geometry (radius, spring, stagger) is animated by Motion; the surface swap (pill fill → elevated surface, plus the shadow and hairline) is a CSS transition, because Motion can't interpolate between two `var()` values.

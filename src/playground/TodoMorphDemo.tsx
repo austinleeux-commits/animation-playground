@@ -1,7 +1,7 @@
 import { useDialKit } from 'dialkit'
 import type { Transition } from 'motion/react'
 import type { ReactNode } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { animate, AnimatePresence, motion, useMotionValue } from 'motion/react'
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import type { Thought, TodoItem } from './todoItems'
 import { DONE_COUNT, ITEMS } from './todoItems'
@@ -17,8 +17,9 @@ import {
 /*
  * Two states from the "AI Chat" Figma file (Thinking Steps 1 → Thinking Steps 2):
  * a 36px status pill that expands into a 656px todo card. Both sit at the same
- * top-left with the same width, so the whole transition is a downward container
- * transform — height, corner radius, and surface, with the content swapped.
+ * top-left with the same width, so the whole transition is the container
+ * growing downwards — height, corner radius, and surface, with the content
+ * swapped.
  */
 
 /** dialkit hands back whichever shape the transition control is currently set to. */
@@ -272,9 +273,11 @@ export function TodoMorphDemo() {
   const [openRow, setOpenRow] = useState<string | null>(
     () => ITEMS.find((item) => item.status === 'active')?.id ?? null,
   )
+  const cardRef = useRef<HTMLDivElement>(null)
   const collapsedRef = useRef<HTMLButtonElement>(null)
   const expandedRef = useRef<HTMLDivElement>(null)
-  const [contentHeight, setContentHeight] = useState<number>()
+  /* Set by `morphCard` on the click, read once by the height effect below. */
+  const morphFrom = useRef<number | undefined>(undefined)
   /*
    * DialKit derives every label from its key (camelCase split and title-cased)
    * and has no description field, so the keys are written to read as the
@@ -282,11 +285,6 @@ export function TodoMorphDemo() {
    * load, keeping the panel scannable.
    */
   const p = useDialKit('Todo Card Morph', {
-    cardGrowsBy: {
-      type: 'select',
-      options: ['scaling', 'height'],
-      default: 'scaling',
-    },
     maxCardHeight: [656, 240, 904, 4],
     cornerRadius: {
       _collapsed: true,
@@ -347,24 +345,6 @@ export function TodoMorphDemo() {
     shimmerCycle: [2.4, 0.4, 6],
   })
 
-  const isMorph = p.cardGrowsBy === 'scaling'
-
-  /*
-   * The height technique needs a number to animate towards — `height: 'auto'`
-   * has nothing to interpolate from on a content-sized box. Measure whichever
-   * block is in flow; the container is still at its previous height for the
-   * frame in between, so it animates from there rather than snapping.
-   */
-  useLayoutEffect(() => {
-    if (isMorph) return
-    const el = open ? expandedRef.current : collapsedRef.current
-    if (!el) return
-    const measure = () => setContentHeight(el.offsetHeight)
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [isMorph, open])
   /*
    * AnimatePresence keeps rendering an exiting child with the props it had
    * before the swap, so a transition picked with `open` would be a render
@@ -384,6 +364,59 @@ export function TodoMorphDemo() {
   const detailFade = toTransition(p.openingAStep.textFade as DialTransition)
   const scroll = { idle: p.scrollbar.hideAfter, fade: p.scrollbar.fadeSpeed }
 
+  /*
+   * The gesture's own transition, held for the height effect below. Declared
+   * first, so it lands before that effect runs on the same commit and reads
+   * the spring picked for the gesture that triggered it. Taking it through a
+   * ref also keeps a dial edited mid-flight from restarting a run that is
+   * already going — it lands on the next gesture instead.
+   */
+  const gesture = useRef(container)
+  useLayoutEffect(() => {
+    gesture.current = container
+  })
+
+  /*
+   * The card animates its height across the pill ⇄ card swap and then hands
+   * that height back to the content. Everything after that — a step opening, a
+   * step closing — resizes the card in the same frame as the row that caused
+   * it, on that row's own spring. A card that instead followed a measured
+   * height would always be a spring behind its own content.
+   *
+   * The starting height has to be taken on the click: popLayout pulls the
+   * outgoing block out of flow before layout effects run, so by then the card
+   * has already snapped to whatever is left.
+   */
+  const morphCard = useCallback((next: boolean) => {
+    morphFrom.current = cardRef.current?.offsetHeight
+    setOpen(next)
+  }, [])
+
+  /*
+   * `auto` between gestures is the whole point, and it has to be written by
+   * the card's own motion value: an imperative animation on the same element
+   * lands in the same store, so the last pixel height it left would be
+   * re-asserted over anything set on the node directly.
+   */
+  const cardHeight = useMotionValue<number | 'auto'>('auto')
+  useLayoutEffect(() => {
+    const child = open ? expandedRef.current : collapsedRef.current
+    const from = morphFrom.current
+    /* Consumed once, so a re-render on its own can't restart the swap. */
+    morphFrom.current = undefined
+    if (!child || from === undefined) return
+    cardHeight.jump(from)
+    const controls = animate(cardHeight, child.offsetHeight, {
+      ...gesture.current,
+      /* Not called when the run is stopped, so the release can't land late. */
+      onComplete: () => cardHeight.jump('auto'),
+    })
+    return () => {
+      controls.stop()
+      cardHeight.jump('auto')
+    }
+  }, [cardHeight, open])
+
   /* Opening a step closes whichever one was open; clicking it again closes it. */
   const toggleRow = useCallback((id: string) => {
     setOpenRow((current) => (current === id ? null : id))
@@ -394,6 +427,19 @@ export function TodoMorphDemo() {
     hidden: { opacity: 0, y: p.whenOpening.rowsSlideFrom },
     visible: { opacity: 1, y: 0, transition: expandEnter },
     exit: { opacity: 0, y: p.whenClosing.rowsSlideTo, transition: collapseExit },
+  }
+
+  /*
+   * The card header and the pill are the same band of the card in two states,
+   * so they hand off to each other rather than queue. Left on the row stagger
+   * the header would be last out — it is the first child, and the exit runs in
+   * reverse — which holds "Todo list" on screen while "Processing your
+   * request..." is already fading in underneath it, and you read both at once.
+   * Its own delay overrides the one the stagger would hand down.
+   */
+  const headerVariants = {
+    ...rowVariants,
+    exit: { ...rowVariants.exit, transition: { ...collapseExit, delay: 0 } },
   }
 
   return (
@@ -416,17 +462,13 @@ export function TodoMorphDemo() {
 
         <div className="relative mt-4">
           <motion.div
-            /* Remount when the technique changes so the two never interleave. */
-            key={p.cardGrowsBy}
-            layout={isMorph}
+            ref={cardRef}
             animate={{
               borderRadius: open ? p.cornerRadius.card : p.cornerRadius.pill,
-              ...(isMorph || contentHeight === undefined
-                ? {}
-                : { height: contentHeight }),
             }}
             transition={container}
             style={{
+              height: cardHeight,
               transitionProperty: 'background-color, box-shadow',
               transitionDuration: `${surfaceFade}s`,
               transitionTimingFunction: 'ease-out',
@@ -442,7 +484,6 @@ export function TodoMorphDemo() {
                 <motion.div
                   key="expanded"
                   ref={expandedRef}
-                  layout={isMorph}
                   initial="hidden"
                   animate="visible"
                   exit="exit"
@@ -468,9 +509,9 @@ export function TodoMorphDemo() {
                 >
                   <motion.button
                     type="button"
-                    variants={rowVariants}
+                    variants={headerVariants}
                     aria-expanded
-                    onClick={() => setOpen(false)}
+                    onClick={() => morphCard(false)}
                     className={`flex h-5 shrink-0 cursor-pointer items-center justify-between text-left outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-accent font-semibold ${CALLOUT}`}
                   >
                     <span className="flex items-center gap-2">
@@ -518,8 +559,7 @@ export function TodoMorphDemo() {
                   ref={collapsedRef}
                   type="button"
                   aria-expanded={false}
-                  onClick={() => setOpen(true)}
-                  layout={isMorph}
+                  onClick={() => morphCard(true)}
                   initial={{ opacity: 0 }}
                   animate={{
                     opacity: 1,
@@ -552,10 +592,10 @@ export function TodoMorphDemo() {
 
           {/*
             One chevron across both states, so it turns in place rather than
-            cross-fading. It sits outside the card — a child would ride the
-            layout projection's transform and appear to fly up from the bottom
-            as that unwinds. Only the rotation animates; the 8px inset
-            difference between the two frames is applied instantly.
+            cross-fading. It sits outside the card, which both keeps it clear
+            of the swap and stops the card's `overflow: hidden` from clipping
+            it as the height animates down. Only the rotation animates; the 8px
+            inset difference between the two frames is applied instantly.
           */}
           {p.chevronTurnsInPlace && (
             <motion.div
