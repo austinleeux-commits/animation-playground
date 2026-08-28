@@ -76,7 +76,7 @@ export const ITEMS: TodoItem[] = [
     id: 'activities',
     text: 'Plan activities and attractions suitable for families',
     status: 'active',
-    variant: 'panel',
+    variant: 'thread',
     detail: [
       {
         text: 'Looking for things that work across a six-year-old and an eleven-year-old over two days:',
