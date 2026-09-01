@@ -160,7 +160,7 @@ function sparkleFlipLayer(
           { ty: 'fl', nm: 'Fill', c: { a: 0, k: hexToLottieColor(colorHex) }, o: { a: 0, k: 100 } },
           {
             ty: 'tr',
-            p: { a: 0, k: [0, 0] },
+            p: { a: 0, k: center },
             a: { a: 0, k: center },
             s: { a: 1, k: keyframes },
             r: { a: 0, k: 0 },
