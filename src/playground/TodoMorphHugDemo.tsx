@@ -153,8 +153,8 @@ function StatusIcon({
   emphasized: boolean
 }) {
   const tone = emphasized ? 'text-label' : 'text-label-secondary'
-  if (status === 'active') return <DotsCircleIcon className={`shrink-0 ${tone}`} />
-  if (status === 'done') return <CheckIcon className={`shrink-0 ${tone}`} />
+  if (status === 'active') return <DotsCircleIcon className="shrink-0 text-[#0088FF]" />
+  if (status === 'done') return <CheckIcon className="shrink-0 text-[#34C759]" />
   return <CircleIcon className={`shrink-0 ${tone}`} />
 }
 
@@ -223,7 +223,11 @@ function TodoRow({
           <StatusIcon status={item.status} emphasized={emphasized} />
           <span
             className={`truncate font-medium transition-colors duration-200 ease-out ${CALLOUT} ${
-              emphasized ? 'text-label' : 'text-label-secondary'
+              item.status === 'active'
+                ? 'text-[#0088FF]'
+                : emphasized
+                  ? 'text-label'
+                  : 'text-label-secondary'
             }`}
           >
             {item.text}
