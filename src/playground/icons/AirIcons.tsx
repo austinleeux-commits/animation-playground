@@ -5,14 +5,18 @@
  * animate with their row's text color.
  */
 
+import type { CSSProperties } from 'react'
+
 type IconProps = {
   className?: string
+  style?: CSSProperties
 }
 
-export function LightbulbIcon({ className }: IconProps) {
+export function LightbulbIcon({ className, style }: IconProps) {
   return (
     <svg
       className={className}
+      style={style}
       width="16"
       height="16"
       viewBox="0 0 16 16"
@@ -39,10 +43,11 @@ export function LightbulbIcon({ className }: IconProps) {
   )
 }
 
-export function ChevronIcon({ className }: IconProps) {
+export function ChevronIcon({ className, style }: IconProps) {
   return (
     <svg
       className={className}
+      style={style}
       width="16"
       height="16"
       viewBox="0 0 16 16"
@@ -61,10 +66,11 @@ export function ChevronIcon({ className }: IconProps) {
 }
 
 /** The 34px title chevron — heavier stroke, not a scaled-up ChevronIcon. */
-export function TitleChevronIcon({ className }: IconProps) {
+export function TitleChevronIcon({ className, style }: IconProps) {
   return (
     <svg
       className={className}
+      style={style}
       width="34"
       height="34"
       viewBox="0 0 34 34"
@@ -82,10 +88,11 @@ export function TitleChevronIcon({ className }: IconProps) {
   )
 }
 
-export function CheckIcon({ className }: IconProps) {
+export function CheckIcon({ className, style }: IconProps) {
   return (
     <svg
       className={className}
+      style={style}
       width="16"
       height="16"
       viewBox="0 0 16 16"
@@ -103,10 +110,11 @@ export function CheckIcon({ className }: IconProps) {
   )
 }
 
-export function CircleIcon({ className }: IconProps) {
+export function CircleIcon({ className, style }: IconProps) {
   return (
     <svg
       className={className}
+      style={style}
       width="16"
       height="16"
       viewBox="0 0 16 16"
@@ -125,10 +133,11 @@ export function CircleIcon({ className }: IconProps) {
 }
 
 /** In-progress marker: a circle with three dots. */
-export function DotsCircleIcon({ className }: IconProps) {
+export function DotsCircleIcon({ className, style }: IconProps) {
   return (
     <svg
       className={className}
+      style={style}
       width="16"
       height="16"
       viewBox="0 0 16 16"
@@ -138,6 +147,29 @@ export function DotsCircleIcon({ className }: IconProps) {
       <path
         d="M13.25 8C13.25 5.1005 10.8995 2.75 8 2.75C5.10051 2.75 2.75 5.10051 2.75 8C2.75 10.8995 5.1005 13.25 8 13.25C10.8995 13.25 13.25 10.8995 13.25 8ZM6.5 8C6.5 8.55227 6.0523 9 5.5 9C4.9477 9 4.5 8.55227 4.5 8C4.5 7.44773 4.9477 7 5.5 7C6.0523 7 6.5 7.44773 6.5 8ZM9 8C9 8.55228 8.55228 9 8 9C7.44772 9 7 8.55228 7 8C7 7.44772 7.44772 7 8 7C8.55228 7 9 7.44772 9 8ZM11.5 8C11.5 8.55228 11.0523 9 10.5 9C9.94772 9 9.5 8.55228 9.5 8C9.5 7.44772 9.94772 7 10.5 7C11.0523 7 11.5 7.44772 11.5 8ZM14.75 8C14.75 11.7279 11.7279 14.75 8 14.75C4.27208 14.75 1.25 11.7279 1.25 8C1.25 4.27208 4.27208 1.25 8 1.25C11.7279 1.25 14.75 4.27208 14.75 8Z"
         fill="currentColor"
+      />
+    </svg>
+  )
+}
+
+/** Closes the expanded card — the top-right control the chevron used to hold. */
+export function CloseIcon({ className, style }: IconProps) {
+  return (
+    <svg
+      className={className}
+      style={style}
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden
+    >
+      <path
+        d="M4 12L12 4M4 4L12 12"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   )

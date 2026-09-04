@@ -1,277 +1,31 @@
 import { useDialKit } from 'dialkit'
-import type { Transition } from 'motion/react'
-import type { ReactNode } from 'react'
 import { animate, AnimatePresence, motion, useMotionValue } from 'motion/react'
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
-import type { Thought, TodoItem } from './todoItems'
-import { DONE_COUNT, ITEMS } from './todoItems'
-import {
-  CheckIcon,
-  ChevronIcon,
-  CircleIcon,
-  DotsCircleIcon,
-  LightbulbIcon,
-  TitleChevronIcon,
-} from './icons/AirIcons'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { TodoItem } from './todoItems'
+import { collectIds, DONE_COUNT, ITEMS } from './todoItems'
+import type { DialTransition } from './dialTransition'
+import { toCssTransition, toTransition } from './dialTransition'
+import { CALLOUT, ScrollArea, TodoRow } from './todoCard'
+import { formatElapsed, useElapsedSeconds } from './thinkingTimer'
+import { CloseIcon, LightbulbIcon, TitleChevronIcon } from './icons/AirIcons'
 
 /*
  * Same two Figma frames as TodoMorphDemo (Thinking Steps 1 → Thinking Steps
  * 2), but the collapsed pill hugs its content instead of matching the card's
  * width. That means the container's width has to animate alongside its
- * height, rather than staying fixed at `w-full` for both states.
+ * height, rather than staying fixed at `w-full` for both states. What the card
+ * holds lives in `todoCard.tsx`, shared with the full-width variant.
  */
-
-/** dialkit hands back whichever shape the transition control is currently set to. */
-type DialTransition =
-  | {
-      type: 'spring'
-      stiffness?: number
-      damping?: number
-      mass?: number
-      visualDuration?: number
-      bounce?: number
-    }
-  | { type: 'easing'; duration: number; ease: [number, number, number, number] }
-
-function toTransition(config: DialTransition): Transition {
-  return config.type === 'spring'
-    ? config
-    : { duration: config.duration, ease: config.ease }
-}
-
-const CALLOUT = 'text-[14px] leading-5 tracking-[-0.14px]'
-
-type ScrollTiming = { idle: number; fade: number }
-
-const THUMB_MIN = 24
-
-/**
- * Scroll container with its own overlay thumb: hidden at rest, revealed while
- * scrolling, faded back out once it stops. The thumb is drawn rather than
- * styled through `::-webkit-scrollbar`, because that forces a space-taking
- * scrollbar on machines set to always show them, and its pseudo-element can't
- * be reliably transitioned.
- */
-function ScrollArea({
-  timing,
-  className,
-  innerClassName,
-  children,
-}: {
-  timing: ScrollTiming
-  className?: string
-  innerClassName?: string
-  children: ReactNode
-}) {
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
-  const idleTimer = useRef<number | undefined>(undefined)
-  const [scrolling, setScrolling] = useState(false)
-  const [thumb, setThumb] = useState({ height: 0, top: 0, overflowing: false })
-
-  const measure = useCallback(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const { scrollHeight, clientHeight, scrollTop } = el
-    if (scrollHeight <= clientHeight) {
-      setThumb((t) => ({ ...t, overflowing: false }))
-      return
-    }
-    const height = Math.max(THUMB_MIN, (clientHeight / scrollHeight) * clientHeight)
-    const top = (scrollTop / (scrollHeight - clientHeight)) * (clientHeight - height)
-    setThumb({ height, top, overflowing: true })
-  }, [])
-
-  const handleScroll = useCallback(() => {
-    measure()
-    setScrolling(true)
-    window.clearTimeout(idleTimer.current)
-    idleTimer.current = window.setTimeout(
-      () => setScrolling(false),
-      timing.idle * 1000,
-    )
-  }, [measure, timing.idle])
-
-  /* Content grows when a step opens, so watch it as well as the viewport. */
-  useLayoutEffect(() => {
-    measure()
-    const observer = new ResizeObserver(measure)
-    if (scrollRef.current) observer.observe(scrollRef.current)
-    if (contentRef.current) observer.observe(contentRef.current)
-    return () => {
-      observer.disconnect()
-      window.clearTimeout(idleTimer.current)
-    }
-  }, [measure])
-
-  return (
-    <div className={`relative flex flex-col ${className ?? ''}`}>
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className={`air-scroll min-h-0 flex-1 overflow-y-auto ${innerClassName ?? ''}`}
-      >
-        <div ref={contentRef}>{children}</div>
-      </div>
-      <motion.div
-        aria-hidden
-        animate={{ opacity: scrolling && thumb.overflowing ? 1 : 0 }}
-        transition={{ duration: timing.fade, ease: 'easeOut' }}
-        style={{ height: thumb.height, top: thumb.top }}
-        className="pointer-events-none absolute right-0 w-1 rounded-full bg-overlay"
-      />
-    </div>
-  )
-}
-
-function Thinking({ blocks }: { blocks: Thought[] }) {
-  return (
-    <div className={`${CALLOUT} flex flex-col gap-3 text-label-secondary`}>
-      {blocks.map((block) =>
-        typeof block === 'string' ? (
-          <p key={block}>{block}</p>
-        ) : (
-          <div key={block.bullets.join('|')}>
-            {block.text && <p>{block.text}</p>}
-            <ul className="list-disc ps-[21px]">
-              {block.bullets.map((bullet) => (
-                <li key={bullet}>{bullet}</li>
-              ))}
-            </ul>
-          </div>
-        ),
-      )}
-    </div>
-  )
-}
-
-function StatusIcon({
-  status,
-  emphasized,
-}: {
-  status: TodoItem['status']
-  emphasized: boolean
-}) {
-  const tone = emphasized ? 'text-label' : 'text-label-secondary'
-  if (status === 'active') return <DotsCircleIcon className={`shrink-0 ${tone}`} />
-  if (status === 'done') return <CheckIcon className={`shrink-0 ${tone}`} />
-  return <CircleIcon className={`shrink-0 ${tone}`} />
-}
-
-/** Completed step: hairline thread down the left, no surface behind the text. */
-function ThreadDetail({ blocks }: { blocks: Thought[] }) {
-  return (
-    <div className="relative flex flex-col items-start pb-4 pl-6">
-      <div className="w-full px-4">
-        <Thinking blocks={blocks} />
-      </div>
-      <div className="absolute bottom-4 left-7 top-0 w-px bg-separator-non-opaque" />
-    </div>
-  )
-}
-
-/** In-progress step: filled panel clipped to 128px, scrolling its own output. */
-function PanelDetail({
-  blocks,
-  scroll,
-}: {
-  blocks: Thought[]
-  scroll: ScrollTiming
-}) {
-  return (
-    <div className="flex flex-col items-start pl-6">
-      <div className="w-full rounded-2xl bg-fill-quaternary p-4">
-        <ScrollArea timing={scroll} className="h-32" innerClassName="pr-2">
-          <Thinking blocks={blocks} />
-        </ScrollArea>
-      </div>
-    </div>
-  )
-}
-
-function TodoRow({
-  item,
-  isOpen,
-  onToggle,
-  sizeTransition,
-  fadeTransition,
-  scroll,
-}: {
-  item: TodoItem
-  isOpen: boolean
-  onToggle: () => void
-  sizeTransition: Transition
-  fadeTransition: Transition
-  scroll: ScrollTiming
-}) {
-  const expandable = Boolean(item.detail)
-  /* The running step stays prominent whether or not its output is showing. */
-  const emphasized = isOpen || item.status === 'active'
-
-  return (
-    <div className="flex flex-col">
-      <button
-        type="button"
-        disabled={!expandable}
-        aria-expanded={expandable ? isOpen : undefined}
-        onClick={onToggle}
-        className={`flex h-5 w-full items-center justify-between text-left outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-accent ${
-          expandable ? 'cursor-pointer' : 'cursor-default'
-        }`}
-      >
-        <span className="flex min-w-0 items-center gap-2">
-          <StatusIcon status={item.status} emphasized={emphasized} />
-          <span
-            className={`truncate font-medium transition-colors duration-200 ease-out ${CALLOUT} ${
-              emphasized ? 'text-label' : 'text-label-secondary'
-            }`}
-          >
-            {item.text}
-          </span>
-        </span>
-        {expandable && (
-          <ChevronIcon
-            className={`shrink-0 text-label-tertiary transition-transform duration-200 ${
-              isOpen ? 'rotate-90' : ''
-            }`}
-          />
-        )}
-      </button>
-
-      {/* Height animates from 0, so Motion has a number to interpolate from. */}
-      <AnimatePresence initial={false}>
-        {expandable && isOpen && (
-          <motion.div
-            key="detail"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ height: sizeTransition, opacity: fadeTransition }}
-            className="overflow-hidden"
-          >
-            <div className="pt-2">
-              {item.variant === 'panel' ? (
-                <PanelDetail blocks={item.detail!} scroll={scroll} />
-              ) : (
-                <ThreadDetail blocks={item.detail!} />
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
 
 export function TodoMorphHugDemo() {
   const [open, setOpen] = useState(false)
   /*
-   * One step's output at a time, so a single id says it all. Starts on the
-   * step still running; completed ones stay collapsed.
+   * Nesting rules out a single open id — opening a sub-step has to leave its
+   * ancestors open — so the set holds every open row and the toggle keeps one
+   * open per level. Nothing starts open: a row that did would sit there wearing
+   * the revealed state, and the list reads as one thing at rest.
    */
-  const [openRow, setOpenRow] = useState<string | null>(
-    () => ITEMS.find((item) => item.status === 'active')?.id ?? null,
-  )
+  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set())
   /* Stable width to expand back into — unlike the card, unaffected by its own animation. */
   const containerRef = useRef<HTMLDivElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -361,12 +115,26 @@ export function TodoMorphHugDemo() {
         ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
       },
     },
+    whenHoveringARow: {
+      _collapsed: true,
+      chevronAndTimerAppear: {
+        type: 'easing',
+        duration: 0.15,
+        ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+      },
+      timerAlsoAppears: true,
+    },
+    nestedTaskLists: {
+      _collapsed: true,
+      rowsIndent: [24, 0, 48, 1],
+      betweenRows: [10, 0, 24, 1],
+      threadLineShows: true,
+    },
     scrollbar: {
       _collapsed: true,
       hideAfter: [0.9, 0.2, 3],
       fadeSpeed: [0.3, 0, 1],
     },
-    shimmerCycle: [2.4, 0.4, 6],
   })
 
   /*
@@ -387,6 +155,17 @@ export function TodoMorphHugDemo() {
   const detailSize = toTransition(p.openingAStep.heightChange as DialTransition)
   const detailFade = toTransition(p.openingAStep.textFade as DialTransition)
   const scroll = { idle: p.scrollbar.hideAfter, fade: p.scrollbar.fadeSpeed }
+  const thinkingFor = useElapsedSeconds(!open)
+  const rowLayout = {
+    indent: p.nestedTaskLists.rowsIndent,
+    nestedGap: p.nestedTaskLists.betweenRows,
+    reveal: toCssTransition(
+      p.whenHoveringARow.chevronAndTimerAppear as DialTransition,
+      'opacity, color, transform',
+    ),
+    showsTimer: p.whenHoveringARow.timerAlsoAppears,
+    showsThreadLine: p.nestedTaskLists.threadLineShows,
+  }
   /*
    * Sideways First splits the morph in two: the pill stretches to the column
    * on its own transition, then the card unfurls downward; closing reverses
@@ -443,6 +222,24 @@ export function TodoMorphHugDemo() {
       : undefined
     setOpen(next)
   }, [])
+
+  /*
+   * Clicking anywhere off the card puts it back to the pill. The listener sits
+   * on the exploration's own area rather than the document, so reaching for the
+   * dial panel to tune the expanded state doesn't collapse the thing you are
+   * tuning.
+   */
+  const pageRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const page = pageRef.current
+    if (!open || !page) return
+    const collapseIfOutside = (event: PointerEvent) => {
+      if (!cardRef.current?.contains(event.target as Node)) morphCard(false)
+    }
+    page.addEventListener('pointerdown', collapseIfOutside)
+    return () => page.removeEventListener('pointerdown', collapseIfOutside)
+  }, [open, morphCard])
+
 
   /*
    * Height settles on `auto` between gestures, same as TodoMorphDemo. Width
@@ -507,9 +304,21 @@ export function TodoMorphHugDemo() {
     }
   }, [cardWidth, cardHeight, open])
 
-  /* Opening a step closes whichever one was open; clicking it again closes it. */
-  const toggleRow = useCallback((id: string) => {
-    setOpenRow((current) => (current === id ? null : id))
+  /* Opening a step closes whichever sibling was open, and everything inside it. */
+  const toggleRow = useCallback((item: TodoItem, siblings: TodoItem[]) => {
+    setOpenIds((current) => {
+      const next = new Set(current)
+      const close = (target: TodoItem) => {
+        for (const id of collectIds([target])) next.delete(id)
+      }
+      if (next.has(item.id)) {
+        close(item)
+        return next
+      }
+      siblings.forEach(close)
+      next.add(item.id)
+      return next
+    })
   }, [])
 
   /* Rows take their timing from the parent's delayChildren/staggerChildren. */
@@ -534,6 +343,7 @@ export function TodoMorphHugDemo() {
 
   return (
     <div
+      ref={pageRef}
       className="font-air flex-1 w-full p-6 transition-colors duration-500"
       style={{
         background:
@@ -544,8 +354,7 @@ export function TodoMorphHugDemo() {
         {/* Static context from the frame so the morph is judged in situ. */}
         <div className="flex items-start gap-1">
           <p className="min-w-0 flex-1 truncate text-[28px] font-bold leading-[34px] tracking-[-0.28px] text-label">
-            Generate a high-resolution QR code directing to the link:
-            airapps.com
+            Generate a Photosynthesis study guide
           </p>
           <TitleChevronIcon className="shrink-0 text-label-secondary" />
         </div>
@@ -598,28 +407,34 @@ export function TodoMorphHugDemo() {
                   style={{ maxHeight: p.maxCardHeight }}
                   className="flex flex-col gap-4 p-4"
                 >
-                  <motion.button
-                    type="button"
+                  <motion.div
                     variants={headerVariants}
-                    aria-expanded
-                    onClick={() => morphCard(false)}
-                    className={`flex h-5 shrink-0 cursor-pointer items-center justify-between text-left outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-accent font-semibold ${CALLOUT}`}
+                    className={`flex shrink-0 flex-col gap-2 ${CALLOUT}`}
                   >
-                    <span className="flex items-center gap-2">
-                      <span className="text-label">Todo list</span>
-                      <span className="text-label">•</span>
-                      <span className="text-label-secondary">
-                        {DONE_COUNT}/{ITEMS.length}
+                    <div className="flex h-5 items-center justify-between">
+                      <span className="flex min-w-0 items-center gap-2 font-medium">
+                        <span className="truncate text-label">Creating photosynthesis guide</span>
+                        <span className="text-label">•</span>
+                        <span className="shrink-0 font-normal text-label-secondary">
+                          {DONE_COUNT}/{ITEMS.length}
+                        </span>
                       </span>
-                    </span>
-                    <ChevronIcon className="shrink-0 rotate-90 text-label-secondary" />
-                  </motion.button>
-
-                  <div
-                    aria-hidden
-                    className="h-0 shrink-0"
-                    style={{ borderTop: '0.5px solid rgba(0, 0, 0, 0.12)' }}
-                  />
+                      {/* The card's one control now that the rows have none. */}
+                      <button
+                        type="button"
+                        aria-label="Collapse the todo list"
+                        onClick={() => morphCard(false)}
+                        className="-m-1 shrink-0 cursor-pointer rounded-sm p-1 text-label outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      >
+                        <CloseIcon />
+                      </button>
+                    </div>
+                    <div
+                      aria-hidden
+                      className="h-0"
+                      style={{ borderTop: '0.5px solid var(--air-separator-non-opaque)' }}
+                    />
+                  </motion.div>
 
                   <ScrollArea
                     timing={scroll}
@@ -631,8 +446,10 @@ export function TodoMorphHugDemo() {
                         <motion.div key={item.id} variants={rowVariants}>
                           <TodoRow
                             item={item}
-                            isOpen={openRow === item.id}
-                            onToggle={() => toggleRow(item.id)}
+                            siblings={ITEMS}
+                            openIds={openIds}
+                            onToggle={toggleRow}
+                            layout={rowLayout}
                             sizeTransition={detailSize}
                             fadeTransition={detailFade}
                             scroll={scroll}
@@ -671,17 +488,16 @@ export function TodoMorphHugDemo() {
                   className="flex h-9 w-fit cursor-pointer items-center gap-2 p-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   <LightbulbIcon className="shrink-0 text-label" />
-                  <span
-                    className={`air-shimmer whitespace-nowrap font-semibold ${CALLOUT}`}
-                    style={
-                      {
-                        '--air-shimmer-duration': `${p.shimmerCycle}s`,
-                      } as React.CSSProperties
-                    }
-                  >
+                  <span className={`whitespace-nowrap font-semibold text-label ${CALLOUT}`}>
                     Processing your request...
                   </span>
-                  <ChevronIcon className="shrink-0 text-label-secondary" />
+                  {/* How long it has been thinking, in place of the chevron. */}
+                  <span
+                    className={`flex shrink-0 items-center gap-2 text-label-secondary ${CALLOUT}`}
+                  >
+                    <span className="font-medium">•</span>
+                    <span>{formatElapsed(thinkingFor)}</span>
+                  </span>
                 </motion.button>
               )}
             </AnimatePresence>
