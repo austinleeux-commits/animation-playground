@@ -125,9 +125,15 @@ function StatusIcon({
   className?: string
   style?: CSSProperties
 }) {
-  if (status === 'active') return <DotsCircleIcon className={`text-label ${className}`} style={style} />
-  /* Done steps carry the design's action green rather than a label tone. */
-  if (status === 'done') return <CheckIcon className={`text-status-success ${className}`} style={style} />
+  /*
+   * Status is carried by the marker's colour, not by the label — the design's
+   * action green and action blue, taken through the token slots that hold those
+   * exact values (#34C759 / #0088FF in light) so they follow the mode.
+   */
+  if (status === 'active')
+    return <DotsCircleIcon className={`text-status-info ${className}`} style={style} />
+  if (status === 'done')
+    return <CheckIcon className={`text-status-success ${className}`} style={style} />
   return <CircleIcon className={`text-label-secondary ${className}`} style={style} />
 }
 

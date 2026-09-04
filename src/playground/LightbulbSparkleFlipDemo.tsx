@@ -16,11 +16,12 @@ export function LightbulbSparkleFlipDemo() {
   const p = useDialKit(
     'Lightbulb Sparkle Flip',
     {
-      sparkleFlipsEvery: [0.5, 0.15, 2, 0.05],
-      flipMotion: { type: 'spring', visualDuration: 0.3, bounce: 0.3 },
+      sparkleFlipsEvery: [1.1, 0.15, 2, 0.05],
+      flipMotion: { type: 'spring', visualDuration: 0.25, bounce: 0.3 },
       flipAxis: { type: 'select', options: ['Horizontal', 'Vertical'], default: 'Horizontal' },
-      bulbColor: { type: 'color', default: '#EDEDED' },
-      sparkleColor: { type: 'color', default: '#FFC53D' },
+      iconBobsEvery: [0.5, 0.4, 3, 0.05],
+      bulbColor: { type: 'color', default: '#8a8a8e' },
+      sparkleColor: { type: 'color', default: '#8a8a8e' },
       exportLottie: { type: 'action' },
     },
     {
@@ -31,6 +32,7 @@ export function LightbulbSparkleFlipDemo() {
             everyIntervalSeconds: p.sparkleFlipsEvery,
             flipAxis: p.flipAxis === 'Vertical' ? 'scaleY' : 'scaleX',
             transition: p.flipMotion,
+            bobEverySeconds: p.iconBobsEvery,
             bulbColor: p.bulbColor,
             sparkleColor: p.sparkleColor,
           }),
@@ -48,7 +50,7 @@ export function LightbulbSparkleFlipDemo() {
   return (
     <Card
       title="Lightbulb Sparkle Flip"
-      description="The sparkle mirror-flips on a timer — tune the interval, curve, axis, and colors, then export as a Lottie file."
+      description="The sparkle mirror-flips on a timer while the whole icon bobs — tune the interval, curve, axis, bob rate, and colors, then export as a Lottie file."
     >
       <LightbulbSparkleIcon
         size={160}
@@ -57,6 +59,7 @@ export function LightbulbSparkleFlipDemo() {
         flipped={flipped}
         flipAxis={p.flipAxis === 'Vertical' ? 'scaleY' : 'scaleX'}
         transition={toMotionTransition(p.flipMotion)}
+        bobEverySeconds={p.iconBobsEvery}
       />
     </Card>
   )
