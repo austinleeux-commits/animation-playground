@@ -55,42 +55,6 @@ body {
 }
 
 /*
- * Shimmer for in-progress titles. The gradient matches the Figma fill, using
- * the label tokens for both stops so it inverts with the mode; it is twice the
- * box width so sliding the background position sweeps it across. Speed comes
- * from --air-shimmer-duration, set inline by the demo's dial.
- */
-.air-shimmer {
-  background-image: linear-gradient(
-    90deg,
-    var(--air-label) 0%,
-    var(--air-label-tertiary) 36%,
-    var(--air-label) 66%,
-    var(--air-label-tertiary) 100%
-  );
-  background-size: 200% 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  animation: air-shimmer var(--air-shimmer-duration, 2.4s) linear infinite;
-}
-
-@keyframes air-shimmer {
-  from {
-    background-position: 200% 0;
-  }
-  to {
-    background-position: -200% 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .air-shimmer {
-    animation: none;
-  }
-}
-
-/*
  * Scroll areas inside a card hide the native scrollbar entirely and draw their
  * own thumb (see ScrollArea), so the reveal-then-fade is the same whether or
  * not the OS is set to always show scrollbars — and so it takes no layout

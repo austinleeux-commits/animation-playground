@@ -3,8 +3,8 @@ import {
   LIGHTBULB_ICON_VIEWBOX,
   LIGHTBULB_LOTTIE_SHAPES,
   LIGHTBULB_SPARKLE_CENTER,
-  type LottieBezierShape,
 } from '../icons/lightbulbSparklePaths'
+import { hexToLottieColor, type LottieBezierShape } from './lottie'
 
 const EXPORT_SIZE = 512
 const EXPORT_SCALE = EXPORT_SIZE / LIGHTBULB_ICON_VIEWBOX
@@ -37,14 +37,6 @@ type Keyframe = {
   s: number[]
   o?: { x: number[]; y: number[] }
   i?: { x: number[]; y: number[] }
-}
-
-function hexToLottieColor(hex: string): [number, number, number, number] {
-  const clean = hex.replace('#', '')
-  const r = parseInt(clean.slice(0, 2), 16) / 255
-  const g = parseInt(clean.slice(2, 4), 16) / 255
-  const b = parseInt(clean.slice(4, 6), 16) / 255
-  return [r, g, b, 1]
 }
 
 function easeBezierFor(transition: TransitionConfig): [number, number, number, number] {
@@ -270,14 +262,4 @@ export function buildLightbulbSparkleLottie(options: LightbulbSparkleLottieOptio
       strokeLayer(3, 'Bulb Outline', LIGHTBULB_LOTTIE_SHAPES.bulbOutline, options.bulbColor, bobKeyframes, totalFrames),
     ],
   }
-}
-
-export function downloadLottieFile(lottie: object, filename: string) {
-  const blob = new Blob([JSON.stringify(lottie, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
 }

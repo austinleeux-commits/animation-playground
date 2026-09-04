@@ -4,7 +4,8 @@ import type { Transition } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { Card } from './Card'
 import { LightbulbSparkleIcon } from './icons/LightbulbSparkleIcon'
-import { buildLightbulbSparkleLottie, downloadLottieFile } from './lottie/buildLightbulbSparkleLottie'
+import { buildLightbulbSparkleLottie } from './lottie/buildLightbulbSparkleLottie'
+import { downloadLottieFile } from './lottie/lottie'
 
 const toMotionTransition = (c: TransitionConfig): Transition =>
   c.type === 'spring' ? c : { duration: c.duration, ease: c.ease }

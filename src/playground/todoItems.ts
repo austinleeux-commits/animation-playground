@@ -1,7 +1,9 @@
 /*
- * Content for the todo card. The completed steps carry the reasoning that
- * produced them; the in-progress step trails off mid-sentence, because it is
- * still streaming.
+ * Content for the todo card. A step can open into either of the two things the
+ * expanded card knows how to show: the prose reasoning that produced it, or a
+ * nested list of its own sub-steps. Both are represented here so the card can
+ * be judged with them side by side. The in-progress step trails off
+ * mid-sentence, because it is still streaming.
  */
 
 export type Thought = string | { text?: string; bullets: string[] }
@@ -10,9 +12,13 @@ export type TodoItem = {
   id: string
   text: string
   status: 'done' | 'active' | 'todo'
+  /** How long the step took. Revealed alongside the chevron on hover or when open. */
+  duration?: string
   /** Filled panel with its own scroll area, for the step still running. */
   variant?: 'thread' | 'panel'
   detail?: Thought[]
+  /** Sub-steps. The other thing a row can open into, in place of `detail`. */
+  children?: TodoItem[]
 }
 
 export const ITEMS: TodoItem[] = [
@@ -20,6 +26,7 @@ export const ITEMS: TodoItem[] = [
     id: 'destination',
     text: 'Choose beach destination and pick travel dates for the weekend',
     status: 'done',
+    duration: '4 sec',
     variant: 'thread',
     detail: [
       {
@@ -39,6 +46,7 @@ export const ITEMS: TodoItem[] = [
     id: 'accomodation',
     text: 'Book accomodation (hotel, condo, or beach house for family of 4)',
     status: 'done',
+    duration: '6 sec',
     variant: 'thread',
     detail: [
       {
@@ -58,6 +66,7 @@ export const ITEMS: TodoItem[] = [
     id: 'transportation',
     text: 'Arrange transportation (flights, driving, rental car if needed)',
     status: 'done',
+    duration: '5 sec',
     variant: 'thread',
     detail: [
       'Driving wins here. The nearest airport is over an hour from Rehoboth, and four people plus beach gear fits in the car without a rental.',
@@ -76,7 +85,7 @@ export const ITEMS: TodoItem[] = [
     id: 'activities',
     text: 'Plan activities and attractions suitable for families',
     status: 'active',
-    variant: 'thread',
+    variant: 'panel',
     detail: [
       {
         text: 'Looking for things that work across a six-year-old and an eleven-year-old over two days:',
@@ -93,7 +102,74 @@ export const ITEMS: TodoItem[] = [
   {
     id: 'packing',
     text: 'Create packing list for beach trip essentials',
-    status: 'todo',
+    status: 'done',
+    duration: '9 sec',
+    children: [
+      {
+        id: 'packing-gear',
+        text: 'Beach gear — umbrella, two chairs, boogie boards',
+        status: 'done',
+        duration: '2 sec',
+      },
+      {
+        id: 'packing-clothes',
+        text: 'Clothing for four across three days',
+        status: 'done',
+        duration: '3 sec',
+        children: [
+          {
+            id: 'packing-swim',
+            text: 'Two swimsuits each, so one is always dry',
+            status: 'done',
+            duration: '1 sec',
+          },
+          {
+            id: 'packing-rain',
+            text: 'Rain layer for the Friday evening shower',
+            status: 'done',
+            duration: '1 sec',
+          },
+          {
+            id: 'packing-warm',
+            text: 'One warm layer for the boardwalk after dark',
+            status: 'done',
+            duration: '1 sec',
+          },
+        ],
+      },
+      {
+        id: 'packing-sun',
+        text: 'Sun and first aid — SPF 50, aloe, plasters',
+        status: 'done',
+        duration: '1 sec',
+      },
+      {
+        /* A nested step that opens into prose rather than more steps, so both
+           kinds of detail sit at the same depth in the prototype. */
+        id: 'packing-kitchen',
+        text: 'Kitchen staples the condo will not have',
+        status: 'done',
+        duration: '2 sec',
+        variant: 'thread',
+        detail: [
+          'Unit 214 advertises a stocked kitchen, which in practice means pans and a coffee maker — not the things you only notice at 8am.',
+          {
+            text: 'Adding to the list:',
+            bullets: [
+              'Olive oil, salt, pepper',
+              'Coffee and filters',
+              'Foil, cling film, a roll of paper towels',
+            ],
+          },
+        ],
+      },
+      {
+        id: 'packing-drive',
+        text: 'Entertainment for the three-hour drive',
+        status: 'done',
+        duration: '1 sec',
+      },
+    ],
   },
   {
     id: 'meals',
@@ -113,3 +189,8 @@ export const ITEMS: TodoItem[] = [
 ]
 
 export const DONE_COUNT = ITEMS.filter((i) => i.status === 'done').length
+
+/** Every id in the subtree, so closing a row can close what it contained. */
+export function collectIds(items: TodoItem[]): string[] {
+  return items.flatMap((item) => [item.id, ...collectIds(item.children ?? [])])
+}
