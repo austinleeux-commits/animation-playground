@@ -1,3 +1,4 @@
+import { CoinFlipDemo } from '../playground/CoinFlipDemo'
 import { FadeDemo } from '../playground/FadeDemo'
 import { GestureDemo } from '../playground/GestureDemo'
 import { GlassDemo } from '../playground/GlassDemo'
@@ -18,6 +19,7 @@ export function PlaygroundHome() {
       <LayoutDemo />
       <GestureDemo />
       <LightbulbSparkleFlipDemo />
+      <CoinFlipDemo />
     </main>
   )
 }

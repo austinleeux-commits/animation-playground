@@ -1,3 +1,5 @@
+import type { LottieBezierShape } from '../lottie/lottie'
+
 /*
  * Path data traced from pill-lightbulb.svg, split so the sparkle can animate
  * independently of the bulb outline and base line.
@@ -15,20 +17,6 @@ export const LIGHTBULB_SPARKLE_PATH =
 export const LIGHTBULB_SPARKLE_CENTER = { x: 8, y: 20 / 3 }
 
 export const LIGHTBULB_ICON_VIEWBOX = 16
-
-export type LottieBezierVertex = {
-  /** Anchor point. */
-  v: [number, number]
-  /** Incoming control-point handle, relative to `v`. */
-  i: [number, number]
-  /** Outgoing control-point handle, relative to `v`. */
-  o: [number, number]
-}
-
-export type LottieBezierShape = {
-  closed: boolean
-  vertices: LottieBezierVertex[]
-}
 
 /**
  * The three paths above, pre-converted from SVG path commands into Lottie's

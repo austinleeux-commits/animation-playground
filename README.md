@@ -46,6 +46,16 @@ DialKit builds each control's label from its key — splitting camelCase and tit
 
 The full convention and its gotchas live in the **`dialkit-controls`** skill (`.claude/skills/dialkit-controls/SKILL.md`). Follow it whenever you add or edit a `useDialKit` config.
 
+## Coin Flip
+
+`src/playground/CoinFlipDemo.tsx` recreates a screen recording of a two-tone disc turning on its vertical axis. The silhouette never changes size — only the boundary between the two faces moves, and it moves as an ellipse pinned to the top and bottom of the rim (a moon's terminator). Measured off the recording: the terminator crosses at a *constant* rate rather than easing in and out, taking ~0.8s, and the disc rests ~0.2s on each face, so a full turn is ~2s.
+
+The whole animation is one number — the terminator's offset, `-1` (nothing showing) through `0` (a straight edge down the middle) to `+1` (the face has swept the disc). Every vertex and bezier handle in `coinFlipGeometry.ts` is affine in it, which is why the Lottie export needs only two path keyframes per half turn: Lottie interpolates vertices and tangents linearly, and for this shape that is exact rather than an approximation.
+
+The preview runs on its own `requestAnimationFrame` clock rather than Motion, so the frames it draws and the frames the exported file draws come from the same function. The clock reads dial values through a ref instead of restarting on each change, so tuning a control doesn't jump-cut the loop back to the top.
+
+**Export Lottie** writes a 512px, 60fps document covering one full turn. Each half turn gets its own disc and sweep layer, scoped with `ip`/`op` so the disc underneath swaps colour on exactly the frame its sweep completes — hold-keyframing a single fill colour is the obvious alternative, but some renderers interpolate it anyway. Shared Lottie plumbing (the bezier shape format, colour conversion, the SVG `d` round-trip, the download) lives in `src/playground/lottie/lottie.ts`.
+
 ## Todo Card Morph
 
 Built from two frames in the "AI Chat" Figma file — `Thinking Steps 1` (a 36px status pill) and `Thinking Steps 2` (the 656px todo card). Both frames place the element at the same position and width, so the whole transition is the container growing downwards.
